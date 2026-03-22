@@ -1,0 +1,38 @@
+server:
+  port: 8086
+
+app:
+  base-url: http://localhost:8086
+
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/wa_db}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:123}
+
+storage-service:
+  base-url: ${STORAGE_SERVICE_BASE_URL:http://localhost:8085/v1/users/{userId}/dashboard}
+  timeout: 5000
+
+aws:
+  s3:
+    access-key-id: ${AWS_S3_ACCESS_KEY_ID:admin}
+    secret-access-key: ${AWS_S3_SECRET_ACCESS_KEY:admin123}
+    region: us-east-1
+    endpoint: ${AWS_S3_ENDPOINT:http://localhost:9000}
+    path-style-access: false
+    bucket-name: ${AWS_S3_BUCKET_NAME:health-reports}
+    presigned-url-expiration: 3600
+    report-prefix: report
+
+jwt:
+  secret:
+    access: ${JWT_SECRET_ACCESS:Y5ncOVqSI/HnJisBxE0TDsk/3cMP/FbwMDL+elybXkqsmpjNIqbjwCCOM8wTznVkqxeYZqf+ppsr4wzHNt8peA==}
+
+scheduling:
+  weekly-delete:
+    cron: ${WEEKLY_DELETE_CRON:0 0 1 * * SUN}
+
+logging:
+  charset:
+    console: UTF-8
