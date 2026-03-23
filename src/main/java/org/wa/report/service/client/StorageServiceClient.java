@@ -14,10 +14,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class StorageServiceClient {
 
-    private final WebClient webClient;
+    private final WebClient storageServiceWebClient;
 
     public Mono<CombinedDashboardDto> getData(UUID userId, OffsetDateTime from, OffsetDateTime to, String bucket) {
-        return webClient.get()
+        return storageServiceWebClient.get()
                 .uri(uriBuilder -> uriBuilder
                         .queryParam("from", from.toString())
                         .queryParam("to", to.toString())

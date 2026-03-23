@@ -24,11 +24,20 @@ public class ExcelReportGenerator {
 
     private static final String[] METRICS_COLUMNS =
             {"Период", "Ср. пульс", "Макс. пульс", "Ср. шаги", "Макс. шаги", "Ср. сон (часы)"};
+
     private static final String[] ACTIVITIES_COLUMNS =
             {"Период", "Активность", "Параметр", "Счётчик активности",
                     "Общее кол-во", "Ср. кол-во", "Мин. кол-во", "Макс. кол-во"};
+
     private static final DateTimeFormatter FILENAME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+
+    private static final String SHEET_METRICS_NAME = "Метрики";
+    private static final String SHEET_ACTIVITIES_NAME = "Активности";
+    private static final String TITLE_METRICS = "Детальные метрики";
+    private static final String TITLE_ACTIVITIES = "Активности";
+    private static final String EXCEL_FILE_PREFIX = "excel_report_";
+    private static final String EXCEL_FILE_EXTENSION = ".xlsx";
 
     public Resource generate(CombinedDashboardDto dto) {
         if (dto == null) {
@@ -64,7 +73,7 @@ public class ExcelReportGenerator {
     }
 
     private void createMetricsSheet(SXSSFWorkbook workbook, CombinedDashboardDto data) {
-        SXSSFSheet sheet = workbook.createSheet("Метрики");
+        SXSSFSheet sheet = workbook.createSheet(SHEET_METRICS_NAME);
 
         for (int i = 0; i < METRICS_COLUMNS.length; i++) {
             sheet.trackColumnForAutoSizing(i);
@@ -74,7 +83,7 @@ public class ExcelReportGenerator {
 
         Row titleRow = sheet.createRow(0);
         Cell titleCell = titleRow.createCell(0);
-        titleCell.setCellValue("Детальные метрики");
+        titleCell.setCellValue(TITLE_METRICS);
 
         Row headerRow = sheet.createRow(2);
         for (int i = 0; i < METRICS_COLUMNS.length; i++) {
@@ -99,7 +108,7 @@ public class ExcelReportGenerator {
     }
 
     private void createActivitiesSheet(SXSSFWorkbook workbook, CombinedDashboardDto data) {
-        SXSSFSheet sheet = workbook.createSheet("Активности");
+        SXSSFSheet sheet = workbook.createSheet(SHEET_ACTIVITIES_NAME);
 
         for (int i = 0; i < ACTIVITIES_COLUMNS.length; i++) {
             sheet.trackColumnForAutoSizing(i);
@@ -109,7 +118,7 @@ public class ExcelReportGenerator {
 
         Row titleRow = sheet.createRow(0);
         Cell titleCell = titleRow.createCell(0);
-        titleCell.setCellValue("Активности");
+        titleCell.setCellValue(TITLE_ACTIVITIES);
 
         Row headerRow = sheet.createRow(2);
         for (int i = 0; i < ACTIVITIES_COLUMNS.length; i++) {
@@ -137,6 +146,6 @@ public class ExcelReportGenerator {
 
     private String generateFilename() {
         String timestamp = OffsetDateTime.now().format(FILENAME_FORMATTER);
-        return String.format("excel_report_%s.xlsx", timestamp);
+        return EXCEL_FILE_PREFIX + timestamp + EXCEL_FILE_EXTENSION;
     }
 }

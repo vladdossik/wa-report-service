@@ -25,7 +25,7 @@ public class WebClientConfig {
     private int timeout;
 
     @Bean
-    public WebClient webClient() {
+    public WebClient storageServiceWebClient() {
         HttpClient http = HttpClient.create()
                 .responseTimeout(Duration.ofMillis(timeout))
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, timeout);

@@ -29,9 +29,9 @@ jwt:
   secret:
     access: ${JWT_SECRET_ACCESS}
 
-scheduling:
-  weekly-delete:
-    cron: ${WEEKLY_DELETE_CRON}
+schedule:
+  report-deletion:
+    cron: ${REPORT_DELETION_CRON}
 
 logging:
   charset:

@@ -27,6 +27,10 @@ public class HtmlReportGenerator {
     private static final DateTimeFormatter FILENAME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
+    private static final String EXCEL_DOWNLOAD_URL = "%s/v1/report/download/excel?period=%s&from=%s&to=%s&bucket=%s";
+    private static final String HTML_FILE_PREFIX = "html_report_";
+    private static final String HTML_FILE_EXTENSION = ".html";
+
     public Resource generate(CombinedDashboardDto dto, String excelDownloadUrl) {
         if (dto == null) {
             throw new ReportGenerationException("Данные для генерации отчёта отсутствуют");
@@ -73,8 +77,7 @@ public class HtmlReportGenerator {
         String fromFormatted = from.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         String toFormatted = to.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
 
-        return String.format("%s/v1/report/download/excel?period=%s&from=%s&to=%s&bucket=%s",
-                baseUrl, period, fromFormatted, toFormatted, bucket);
+        return String.format(EXCEL_DOWNLOAD_URL, baseUrl, period, fromFormatted, toFormatted, bucket);
     }
 
     private void validateInputData(CombinedDashboardDto dto) {
@@ -89,6 +92,6 @@ public class HtmlReportGenerator {
 
     private String generateFilename() {
         String timestamp = OffsetDateTime.now().format(FILENAME_FORMATTER);
-        return String.format("html_report_%s.html", timestamp);
+        return HTML_FILE_PREFIX + timestamp + HTML_FILE_EXTENSION;
     }
 }

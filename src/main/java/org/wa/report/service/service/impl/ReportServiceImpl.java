@@ -22,6 +22,7 @@ import org.wa.report.service.service.ReportService;
 import org.wa.report.service.service.S3StorageService;
 import org.wa.report.service.util.ReportServiceUtil;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,6 +38,9 @@ public class ReportServiceImpl implements ReportService {
     private final S3StorageService s3StorageService;
     private final ReportRequestRepository requestRepository;
     private final ReportServiceUtil util;
+    private static final String CONTENT_TYPE_HTML_REPORT = "text/html; charset=utf-8";
+    private static final String CONTENT_TYPE_EXCEL_REPORT =
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
     @Override
     public ReportResponseDto getHtmlReport(PeriodType period) {
@@ -138,10 +142,10 @@ public class ReportServiceImpl implements ReportService {
         return s3StorageService.getPresignedUrl(reportKey);
     }
 
-    @Scheduled(cron = "${scheduling.weekly-delete.cron}")
+    @Scheduled(cron = "${schedule.report-deletion.cron}")
     public void cleanupOldReports() {
         log.info("Начало очистки старых отчётов из S3");
-        s3StorageService.deleteOldReports(java.time.Duration.ofDays(7));
+        s3StorageService.deleteOldReports(Duration.ofDays(7));
         log.info("Очистка старых отчётов из S3 завершена");
     }
 
@@ -166,7 +170,7 @@ public class ReportServiceImpl implements ReportService {
                     userId, ReportType.HTML, period, params.getFrom(), params.getNow());
 
             s3StorageService.saveReport(userId, ReportType.HTML, period, params.getFrom(), params.getNow(), content,
-                    "text/html; charset=utf-8");
+                    CONTENT_TYPE_HTML_REPORT);
 
             saveRequestRecord(userId, period, ReportType.HTML, params.getFrom(),
                     params.getNow(), params.getBucket(), false, reportKey);
@@ -204,7 +208,7 @@ public class ReportServiceImpl implements ReportService {
                     userId, ReportType.EXCEL, period, params.getFrom(), params.getNow());
 
             s3StorageService.saveReport(userId, ReportType.EXCEL, period, params.getFrom(), params.getNow(), content,
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+                    CONTENT_TYPE_EXCEL_REPORT);
 
             saveRequestRecord(userId, period, ReportType.EXCEL, params.getFrom(),
                     params.getNow(), params.getBucket(), false, reportKey);
