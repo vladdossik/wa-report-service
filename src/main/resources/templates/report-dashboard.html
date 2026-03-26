@@ -343,7 +343,7 @@
 
     function downloadExcel(event) {
         event.preventDefault();
-        window.location.href = `/v1/report/download/excel?period=${currentPeriod}`;
+        window.location.href = `/v1/rest/report/download/excel?period=${currentPeriod}`;
     }
 
     function loadReport(period) {

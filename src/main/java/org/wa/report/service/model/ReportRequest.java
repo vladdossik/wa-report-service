@@ -11,8 +11,9 @@ import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.wa.report.service.enumeration.Bucket;
 import org.wa.report.service.enumeration.PeriodType;
@@ -22,17 +23,17 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "requests")
-@Data
 @Builder
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class ReportRequest {
     @Id
-    @SequenceGenerator(name = "request_seq", sequenceName = "request_seq", allocationSize = 1)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "request_seq")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "external_id", nullable = false, unique = true, updatable = false)
+    @Column(name = "external_id", nullable = false, updatable = false)
     private UUID externalId;
 
     @Column(name = "period")
@@ -50,6 +51,7 @@ public class ReportRequest {
     private OffsetDateTime toDate;
 
     @Column(name = "bucket")
+    @Enumerated(EnumType.STRING)
     private Bucket bucket;
 
     @CreationTimestamp

@@ -6,7 +6,4 @@ public class ReportGenerationException extends RuntimeException {
         super(message);
     }
 
-    public ReportGenerationException(String message, Throwable cause) {
-        super(message, cause);
-    }
 }

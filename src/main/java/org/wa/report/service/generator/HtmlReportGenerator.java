@@ -3,13 +3,15 @@ package org.wa.report.service.generator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.wa.report.service.dto.CombinedDashboardDto;
 import org.wa.report.service.enumeration.PeriodType;
 import org.wa.report.service.exception.ReportGenerationException;
 import org.wa.report.service.util.HtmlUtilEngine;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -53,13 +55,19 @@ public class HtmlReportGenerator {
             }
 
             byte[] htmlBytes = html.getBytes(StandardCharsets.UTF_8);
+            InputStream result = new ByteArrayInputStream(htmlBytes);
 
             log.info("HTML отчёт сгенерирован. Размер: {} байт", htmlBytes.length);
 
-            return new ByteArrayResource(htmlBytes) {
+            return new InputStreamResource(result) {
                 @Override
                 public String getFilename() {
                     return generateFilename();
+                }
+
+                @Override
+                public long contentLength() {
+                    return htmlBytes.length;
                 }
             };
 
@@ -68,7 +76,7 @@ public class HtmlReportGenerator {
             throw e;
         } catch (Exception e) {
             log.error("Неожиданная ошибка при генерации HTML отчета", e);
-            throw new ReportGenerationException("Неожиданная ошибка при генерации HTML отчета", e);
+            throw new ReportGenerationException("Неожиданная ошибка при генерации HTML отчета: " + e);
         }
     }
 

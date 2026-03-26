@@ -27,7 +27,7 @@ public class StorageServiceClient {
                 .onStatus(HttpStatusCode::isError, clientResponse ->
                         clientResponse.bodyToMono(String.class).flatMap(error ->
                                 Mono.error(new StorageServiceException(
-                                        "Не удалось получить данные. Статус: ",
+                                        "Не удалось получить данные. Статус: " +
                                         clientResponse.statusCode())
                                 )
                         ))

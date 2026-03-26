@@ -18,7 +18,6 @@ databaseChangeLog:
                   type: UUID
                   constraints:
                     nullable: false
-                    unique: true
               - column:
                   name: period
                   type: VARCHAR(10)
@@ -36,7 +35,7 @@ databaseChangeLog:
                   type: VARCHAR(10)
               - column:
                   name: requested_at
-                  type: TIMESTAMP
+                  type: TIMESTAMP WITH TIME ZONE
                   defaultValueComputed: CURRENT_TIMESTAMP
               - column:
                   name: from_cache
@@ -45,7 +44,30 @@ databaseChangeLog:
                   name: report_key
                   type: VARCHAR(100)
 
-        - createSequence:
-            sequenceName: request_seq
-            startValue: 1
-            incrementBy: 1
+        - createIndex:
+            tableName: requests
+            indexName: idx_boolean_requests_external_id_format_from_date_to_date
+            columns:
+              - column:
+                  name: external_id
+              - column:
+                  name: period
+              - column:
+                  name: format
+              - column:
+                  name: from_date
+              - column:
+                  name: to_date
+            unique: false
+
+        - createIndex:
+            tableName: requests
+            indexName: idx_requests_external_id_format_to_date
+            columns:
+              - column:
+                  name: external_id
+              - column:
+                  name: format
+              - column:
+                  name: to_date
+            unique: false

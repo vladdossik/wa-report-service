@@ -21,10 +21,9 @@ import org.wa.report.service.repository.ReportRequestRepository;
 import org.wa.report.service.service.ReportService;
 import org.wa.report.service.service.S3StorageService;
 import org.wa.report.service.util.ReportServiceUtil;
-import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -43,18 +42,60 @@ public class ReportServiceImpl implements ReportService {
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
     @Override
-    public ReportResponseDto getHtmlReport(PeriodType period) {
+    public ReportResponseDto getLastRequestedHtmlReportDto(PeriodType period) {
+        OffsetDateTime lastDate = util.getLastDateOfUserRequest(ReportType.HTML);
+
+        return getHtmlReport(period, lastDate);
+    }
+
+    @Override
+    public ReportResponseDto getLastRequestedExcelReportDto(PeriodType period) {
+        OffsetDateTime lastDate = util.getLastDateOfUserRequest(ReportType.EXCEL);
+
+        return getExcelReport(period, lastDate);
+    }
+
+    @Override
+    public String getHtmlReportContent(PeriodType period) {
+        OffsetDateTime now = OffsetDateTime.now();
+        ReportResponseDto response = getHtmlReport(period, now);
+
+        if (response == null || response.getDownloadUrl() == null) {
+            log.error("Не удалось получить HTML отчёт для периода: {}", period);
+            throw new ReportGenerationException("Не удалось получить HTML отчёт");
+        }
+
+        return response.getDownloadUrl();
+    }
+
+    @Override
+    public String getExcelDownloadUrl(PeriodType period) {
+        OffsetDateTime lastDate = util.getLastDateOfUserRequest(ReportType.HTML);
+
+        ReportResponseDto response = getExcelReport(period, lastDate);
+
+        return response.getDownloadUrl();
+    }
+
+    @Scheduled(cron = "${schedule.report-deletion.cron}")
+    public void cleanupOldReports() {
+        log.info("Начало очистки старых отчётов из S3");
+        s3StorageService.deleteOldReports(Duration.ofDays(7));
+        log.info("Очистка старых отчётов из S3 завершена");
+    }
+
+
+    private ReportResponseDto getHtmlReport(PeriodType period, OffsetDateTime currentDate) {
         UUID userId = AuthContextHolder.getId();
-        ReportPeriodParams params = util.getPeriodParams(period);
+        ReportPeriodParams params = util.getPeriodParams(period, currentDate);
 
         log.info("Запрос HTML отчёта. Пользователь: {}, Период: {}, from: {}, to: {}",
                 userId, period, params.getFrom(), params.getNow());
 
         if (util.isCached(period, ReportType.HTML, params.getFrom(), params.getNow())) {
             String reportKey = util.generateReportKey(userId, ReportType.HTML, period, params.getFrom(), params.getNow());
-            Optional<Resource> cachedReport = s3StorageService.getReport(reportKey);
 
-            if (cachedReport.isPresent()) {
+            if (s3StorageService.reportExists(reportKey)) {
                 log.info("HTML отчёт найден в кэше S3. Ключ: {}", reportKey);
 
                 saveRequestRecord(userId, period, ReportType.HTML, params.getFrom(), params.getNow(),
@@ -73,22 +114,20 @@ public class ReportServiceImpl implements ReportService {
             log.info("HTML отчёт не найден в кэше. Генерируем новый. Ключ: {}", reportKey);
         }
 
-        return generateAndSaveHtmlReport(userId, period);
+        return generateAndSaveHtmlReport(userId, period, params);
     }
 
-    @Override
-    public ReportResponseDto getExcelReport(PeriodType period) {
+    private ReportResponseDto getExcelReport(PeriodType period, OffsetDateTime currentDate) {
         UUID userId = AuthContextHolder.getId();
-        ReportPeriodParams params = util.getPeriodParams(period);
+        ReportPeriodParams params = util.getPeriodParams(period, currentDate);
 
         log.info("Запрос Excel отчёта. Пользователь: {}, Период: {}, from: {}, to: {}",
                 userId, period, params.getFrom(), params.getNow());
 
         if (util.isCached(period, ReportType.EXCEL, params.getFrom(), params.getNow())) {
             String reportKey = util.generateReportKey(userId, ReportType.EXCEL, period, params.getFrom(), params.getNow());
-            Optional<Resource> cachedReport = s3StorageService.getReport(reportKey);
 
-            if (cachedReport.isPresent()) {
+            if (s3StorageService.reportExists(reportKey)) {
                 log.info("Excel отчёт найден в кэше S3. Ключ: {}", reportKey);
 
                 saveRequestRecord(userId, period, ReportType.EXCEL, params.getFrom(),
@@ -107,51 +146,10 @@ public class ReportServiceImpl implements ReportService {
             log.info("Excel отчёт не найден в кэше. Генерируем новый. Ключ: {}", reportKey);
         }
 
-        return generateAndSaveExcelReport(userId, period);
+        return generateAndSaveExcelReport(userId, period, params);
     }
 
-    @Override
-    public String getHtmlReportContent(PeriodType period) {
-        ReportResponseDto response = getHtmlReport(period);
-
-        if (response == null || response.getDownloadUrl() == null) {
-            log.error("Не удалось получить HTML отчёт для периода: {}", period);
-            throw new ReportGenerationException("Не удалось получить HTML отчёт");
-        }
-
-        return response.getDownloadUrl();
-    }
-
-    @Override
-    public String getExcelDownloadUrl(PeriodType period) {
-        UUID userId = AuthContextHolder.getId();
-        ReportPeriodParams params = util.getPeriodParams(period);
-
-        String reportKey = util.generateReportKey(
-                userId,
-                ReportType.EXCEL,
-                period,
-                params.getFrom(),
-                params.getNow()
-        );
-
-        if (!s3StorageService.reportExists(reportKey)) {
-            getExcelReport(period);
-        }
-
-        return s3StorageService.getPresignedUrl(reportKey);
-    }
-
-    @Scheduled(cron = "${schedule.report-deletion.cron}")
-    public void cleanupOldReports() {
-        log.info("Начало очистки старых отчётов из S3");
-        s3StorageService.deleteOldReports(Duration.ofDays(7));
-        log.info("Очистка старых отчётов из S3 завершена");
-    }
-
-    private ReportResponseDto generateAndSaveHtmlReport(UUID userId, PeriodType period) {
-        ReportPeriodParams params = util.getPeriodParams(period);
-
+    private ReportResponseDto generateAndSaveHtmlReport(UUID userId, PeriodType period, ReportPeriodParams params) {
         try {
             CombinedDashboardDto data = storageServiceClient.getData(
                     userId, params.getFrom(), params.getNow(), params.getBucket().getValue()).block();
@@ -163,14 +161,16 @@ public class ReportServiceImpl implements ReportService {
             String excelDownloadUrl = htmlReportGenerator.generateExcelDownloadUrl(
                     period, params.getFrom(), params.getNow(), params.getBucket().getValue());
 
-            Resource report = htmlReportGenerator.generate(data, excelDownloadUrl);
-
-            byte[] content = report.getContentAsByteArray();
             String reportKey = util.generateReportKey(
                     userId, ReportType.HTML, period, params.getFrom(), params.getNow());
 
-            s3StorageService.saveReport(userId, ReportType.HTML, period, params.getFrom(), params.getNow(), content,
-                    CONTENT_TYPE_HTML_REPORT);
+            Resource report = htmlReportGenerator.generate(data, excelDownloadUrl);
+
+            try (InputStream inputStream = report.getInputStream()) {
+                s3StorageService.saveReport(
+                        userId, ReportType.HTML, period, params.getFrom(), params.getNow(),
+                        inputStream, CONTENT_TYPE_HTML_REPORT, report.contentLength());
+            }
 
             saveRequestRecord(userId, period, ReportType.HTML, params.getFrom(),
                     params.getNow(), params.getBucket(), false, reportKey);
@@ -184,15 +184,13 @@ public class ReportServiceImpl implements ReportService {
                     .period(period)
                     .build();
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("Ошибка при генерации HTML отчёта", e);
-            throw new ReportGenerationException("Ошибка при генерации HTML отчёта", e);
+            throw new ReportGenerationException("Ошибка при генерации HTML отчёта: " + e);
         }
     }
 
-    private ReportResponseDto generateAndSaveExcelReport(UUID userId, PeriodType period) {
-        ReportPeriodParams params = util.getPeriodParams(period);
-
+    private ReportResponseDto generateAndSaveExcelReport(UUID userId, PeriodType period, ReportPeriodParams params) {
         try {
             CombinedDashboardDto data = storageServiceClient.getData(
                     userId, params.getFrom(), params.getNow(), params.getBucket().getValue()).block();
@@ -201,14 +199,16 @@ public class ReportServiceImpl implements ReportService {
                 throw new ReportGenerationException("Не удалось получить данные для отчёта");
             }
 
-            Resource report = excelReportGenerator.generate(data);
-
-            byte[] content = report.getContentAsByteArray();
             String reportKey = util.generateReportKey(
                     userId, ReportType.EXCEL, period, params.getFrom(), params.getNow());
 
-            s3StorageService.saveReport(userId, ReportType.EXCEL, period, params.getFrom(), params.getNow(), content,
-                    CONTENT_TYPE_EXCEL_REPORT);
+            Resource report = excelReportGenerator.generate(data);
+
+            try (InputStream inputStream = report.getInputStream()) {
+                s3StorageService.saveReport(
+                        userId, ReportType.EXCEL, period, params.getFrom(), params.getNow(),
+                        inputStream, CONTENT_TYPE_EXCEL_REPORT, report.contentLength());
+            }
 
             saveRequestRecord(userId, period, ReportType.EXCEL, params.getFrom(),
                     params.getNow(), params.getBucket(), false, reportKey);
@@ -222,9 +222,9 @@ public class ReportServiceImpl implements ReportService {
                     .period(period)
                     .build();
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("Ошибка при генерации Excel отчёта", e);
-            throw new ReportGenerationException("Ошибка при генерации Excel отчёта", e);
+            throw new ReportGenerationException("Ошибка при генерации Excel отчёта: " + e);
         }
     }
 

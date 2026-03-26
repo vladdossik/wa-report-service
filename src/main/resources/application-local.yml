@@ -23,7 +23,6 @@ aws:
     path-style-access: false
     bucket-name: ${AWS_S3_BUCKET_NAME:health-reports}
     presigned-url-expiration: 3600
-    report-prefix: report
 
 jwt:
   secret:

@@ -5,15 +5,17 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.streaming.SXSSFSheet;
 import org.apache.poi.xssf.streaming.SXSSFWorkbook;
-import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.wa.report.service.dto.AggregatedActivityDto;
 import org.wa.report.service.dto.AggregatedMetricDto;
 import org.wa.report.service.dto.CombinedDashboardDto;
 import org.wa.report.service.exception.ReportGenerationException;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -50,25 +52,33 @@ public class ExcelReportGenerator {
         }
 
         try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-             SXSSFWorkbook workbook = new SXSSFWorkbook()) {
+             SXSSFWorkbook workbook = new SXSSFWorkbook(300)) {
 
-            createMetricsSheet(workbook, dto);
-            createActivitiesSheet(workbook, dto);
+                createMetricsSheet(workbook, dto);
+                createActivitiesSheet(workbook, dto);
 
-            workbook.write(outputStream);
+                workbook.write(outputStream);
 
-            log.info("Excel отчёт сгенерирован. Размер: {} байт", outputStream.size());
+            byte[] excelBytes = outputStream.toByteArray();
+            InputStream result = new ByteArrayInputStream(excelBytes);
 
-            return new ByteArrayResource(outputStream.toByteArray()) {
+            log.info("Excel отчёт сгенерирован. Размер: {} байт", excelBytes.length);
+
+            return new InputStreamResource(result) {
                 @Override
                 public String getFilename() {
                     return generateFilename();
+                }
+
+                @Override
+                public long contentLength() {
+                    return excelBytes.length;
                 }
             };
 
         } catch (IOException e) {
             log.error("Ошибка при генерации Excel отчета", e);
-            throw new ReportGenerationException("Ошибка генерации Excel отчета", e);
+            throw new ReportGenerationException("Ошибка генерации Excel отчета: " + e);
         }
     }
 

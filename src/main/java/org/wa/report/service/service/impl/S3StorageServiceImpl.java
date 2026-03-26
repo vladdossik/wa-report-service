@@ -3,19 +3,16 @@ package org.wa.report.service.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.wa.report.service.enumeration.PeriodType;
 import org.wa.report.service.enumeration.ReportType;
 import org.wa.report.service.exception.S3StorageException;
 import org.wa.report.service.service.S3StorageService;
-import software.amazon.awssdk.core.ResponseInputStream;
+import org.wa.report.service.util.ReportServiceUtil;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.ListObjectsV2Response;
@@ -25,12 +22,11 @@ import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
-import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -42,27 +38,27 @@ public class S3StorageServiceImpl implements S3StorageService {
 
     private final S3Presigner s3Presigner;
 
+    private final ReportServiceUtil util;
+
     @Value("${aws.s3.bucket-name}")
     private String bucketName;
-
-    @Value("${aws.s3.report-prefix}")
-    private String reportPrefix;
 
     @Value("${aws.s3.presigned-url-expiration}")
     private long presignedUrlExpiration;
 
-    private static final DateTimeFormatter DATE_FORMATTER =
-            DateTimeFormatter.ofPattern("yyyy/MM/dd");
-
     @Override
     public String saveReport(UUID userId, ReportType format, PeriodType period,
                              OffsetDateTime from, OffsetDateTime to,
-                             byte[] content, String contentType) {
+                             InputStream contentStream, String contentType, long contentLength) {
+        if (contentStream == null) {
+            throw new S3StorageException("InputStream не может быть null");
+        }
+
         try {
-            String key = generateKey(userId, format, period, from, to);
+            String key = util.generateReportKey(userId, format, period, from, to);
 
             log.info("Сохранение отчёта в S3. Пользователь: {}, Ключ: {}, Размер: {} байт",
-                    userId, key, content.length);
+                    userId, key, contentLength);
 
             PutObjectRequest request = PutObjectRequest.builder()
                     .bucket(bucketName)
@@ -78,7 +74,7 @@ public class S3StorageServiceImpl implements S3StorageService {
                     ))
                     .build();
 
-            s3Client.putObject(request, RequestBody.fromBytes(content));
+            s3Client.putObject(request, RequestBody.fromInputStream(contentStream, contentLength));
 
             log.info("Отчёт успешно сохранен в S3: {}", key);
 
@@ -86,31 +82,7 @@ public class S3StorageServiceImpl implements S3StorageService {
 
         } catch (S3Exception e) {
             log.error("Ошибка сохранения отчёта в S3. Пользователь: {}, Формат: {}", userId, format, e);
-            throw new S3StorageException("Ошибка сохранения отчёта в S3", e);
-        }
-    }
-
-    @Override
-    public Optional<Resource> getReport(String key) {
-        try {
-            log.debug("Получение отчёта из S3: {}", key);
-
-            GetObjectRequest request = GetObjectRequest.builder()
-                    .bucket(bucketName)
-                    .key(key)
-                    .build();
-
-            try (ResponseInputStream<GetObjectResponse> response = s3Client.getObject(request)) {
-                byte[] content = response.readAllBytes();
-                return Optional.of(new ByteArrayResource(content));
-            }
-
-        } catch (NoSuchKeyException e) {
-            log.debug("Отчёт не найден в S3: {}", key);
-            return Optional.empty();
-        } catch (IOException | S3Exception e) {
-            log.error("Ошибка получения отчёта из S3: {}", key, e);
-            throw new S3StorageException("Ошибка получения отчёта из S3", e);
+            throw new S3StorageException("Ошибка сохранения отчёта в S3: " + e.getMessage());
         }
     }
 
@@ -138,27 +110,51 @@ public class S3StorageServiceImpl implements S3StorageService {
     public void deleteOldReports(Duration olderThan) {
         try {
             OffsetDateTime cutOffTime = OffsetDateTime.now().minus(olderThan);
+            String prefix = "report/";
+            int batchSize = 100;
+            int deletedCount = 0;
 
-            ListObjectsV2Request request = ListObjectsV2Request.builder()
+            log.info("Начало удаления отчётов старше: {}", cutOffTime);
+
+            ListObjectsV2Request listRequest = ListObjectsV2Request.builder()
                     .bucket(bucketName)
-                    .prefix(reportPrefix + "/")
+                    .prefix(prefix)
+                    .maxKeys(batchSize)
                     .build();
 
-            ListObjectsV2Response response;
-            do {
-                response = s3Client.listObjectsV2(request);
+            ListObjectsV2Response listResponse;
+            boolean hasMore = true;
 
-                for (S3Object object : response.contents()) {
-                    if (object.lastModified().isBefore(cutOffTime.toInstant())) {
-                        deleteReport(object.key());
-                    }
+            while (hasMore) {
+                listResponse = s3Client.listObjectsV2(listRequest);
+
+                if (listResponse.contents().isEmpty()) {
+                    break;
                 }
 
-                request = request.toBuilder()
-                        .continuationToken(response.nextContinuationToken())
-                        .build();
+                List<String> keysToDelete = listResponse.contents().stream()
+                        .filter(object -> object.lastModified().isBefore(cutOffTime.toInstant()))
+                        .map(S3Object::key)
+                        .toList();
 
-            } while (response.isTruncated());
+                if (!keysToDelete.isEmpty()) {
+                    for (String key : keysToDelete) {
+                        deleteReport(key);
+                        deletedCount++;
+                    }
+                    log.info("Удалено {} отчётов из {} в текущей итерации",
+                            keysToDelete.size(), listResponse.contents().size());
+                }
+
+                hasMore = listResponse.isTruncated();
+                if (hasMore) {
+                    listRequest = listRequest.toBuilder()
+                            .continuationToken(listResponse.nextContinuationToken())
+                            .build();
+                }
+            }
+
+            log.info("Очистка завершена. Всего удалено отчётов: {}", deletedCount);
 
         } catch (S3Exception e) {
             log.error("Ошибка удаления устаревших отчётов", e);
@@ -203,24 +199,7 @@ public class S3StorageServiceImpl implements S3StorageService {
 
         } catch (S3Exception e) {
             log.error("Ошибка генерации временной ссылки: {}", key, e);
-            throw new S3StorageException("Ошибка генерации ссылки на отчёт", e);
+            throw new S3StorageException("Ошибка генерации ссылки на отчёт: " + e);
         }
-    }
-
-    private String generateKey(UUID userId, ReportType format, PeriodType period,
-                               OffsetDateTime from, OffsetDateTime to) {
-        String datePath = OffsetDateTime.now().format(DATE_FORMATTER);
-        String fromDate = from.format(DateTimeFormatter.ISO_LOCAL_DATE);
-        String toDate = to.format(DateTimeFormatter.ISO_LOCAL_DATE);
-
-        return String.format("%s/%s/%s/%s/%s_%s_%s.%s",
-                reportPrefix,
-                userId,
-                format.toString().toLowerCase(),
-                datePath,
-                period.toString().toLowerCase(),
-                fromDate,
-                toDate,
-                format.equals(ReportType.EXCEL) ? "xlsx" : "html");
     }
 }
