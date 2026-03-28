@@ -18,10 +18,10 @@ import java.time.Duration;
 @RequiredArgsConstructor
 public class WebClientConfig {
 
-    @Value("${storage-service.base-url}")
+    @Value("${integration.storage-service.base-url}")
     private String storageBaseUrl;
 
-    @Value("${storage-service.timeout}")
+    @Value("${integration.storage-service.timeout}")
     private int timeout;
 
     @Bean

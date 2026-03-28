@@ -10,9 +10,10 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:123}
 
-storage-service:
-  base-url: ${STORAGE_SERVICE_BASE_URL:http://localhost:8085/v1/users/{userId}/dashboard}
-  timeout: 5000
+integration:
+  storage-service:
+    base-url: ${STORAGE_SERVICE_BASE_URL:http://localhost:8085/v1/users/{userId}/dashboard}
+    timeout: 5000
 
 aws:
   s3:

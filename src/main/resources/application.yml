@@ -10,9 +10,10 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 
-storage-service:
-  base-url: ${STORAGE_SERVICE_BASE_URL}
-  timeout: 5000
+integration:
+  storage-service:
+    base-url: ${STORAGE_SERVICE_BASE_URL}
+    timeout: 5000
 
 aws:
   s3:
