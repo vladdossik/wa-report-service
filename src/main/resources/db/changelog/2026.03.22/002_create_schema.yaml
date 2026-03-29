@@ -1,9 +1,0 @@
-databaseChangeLog:
-  - changeSet:
-      id: 2026.03.22_002_create_schema
-      author: mihailov.pashka@yandex.ru
-      changes:
-        - sql:
-            sql: CREATE SCHEMA IF NOT EXISTS wa_report_service_db;
-        - sql:
-            sql: GRANT ALL PRIVILEGES ON SCHEMA wa_report_service_db TO postgres;
