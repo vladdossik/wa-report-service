@@ -1,3 +1,5 @@
 databaseChangeLog:
   - include:
       file: db/changelog/2026.03.22/001_create_request_table.yaml
+  - include:
+      file: db/changelog/2026.03.22/002_create_schema.yaml
