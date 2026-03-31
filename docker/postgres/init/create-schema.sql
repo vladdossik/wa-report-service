@@ -1,0 +1,1 @@
+CREATE SCHEMA IF NOT EXISTS wa_report_service_db;

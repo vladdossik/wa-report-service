@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  report-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: report-service
+    ports:
+      - "8086:8086"
+    environment:
+      DB_URL: ${DB_URL:-jdbc:postgresql://wa-postgres:5432/wa_db?currentSchema=wa_report_service_db}
+      DB_URL_BASE: ${DB_URL_BASE:-jdbc:postgresql://wa-postgres:5432/wa_db}
+      DB_USERNAME: ${DB_USERNAME:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-123}
+      DB_SCHEMA: ${DB_SCHEMA:-wa_report_service_db}
+      JWT_SECRET_ACCESS: ${JWT_SECRET_ACCESS:-Y5ncOVqSI/HnJisBxE0TDsk/3cMP/FbwMDL+elybXkqsmpjNIqbjwCCOM8wTznVkqxeYZqf+ppsr4wzHNt8peA==}
+      STORAGE_SERVICE_BASE_URL: ${STORAGE_SERVICE_BASE_URL:-http://localhost:8085/v1/users/{userId}/dashboard}
+      STORAGE_SERVICE_TIMEOUT: ${STORAGE_SERVICE_TIMEOUT:-5000}
+      AWS_S3_ACCESS_KEY_ID: ${AWS_S3_ACCESS_KEY_ID:-admin}
+      AWS_S3_SECRET_ACCESS_KEY: ${AWS_S3_SECRET_ACCESS_KEY:-admin123}
+      AWS_S3_REGION: ${AWS_S3_REGION:-us-east-1}
+      AWS_S3_ENDPOINT: ${AWS_S3_ENDPOINT:-http://minio:9000}
+      AWS_S3_PATH_STYLE_ACCESS: ${AWS_S3_PATH_STYLE_ACCESS:-false}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-health-reports}
+      AWS_S3_PRESIGNED_URL_EXPIRATION: ${AWS_S3_PRESIGNED_URL_EXPIRATION:-3600}
+      AWS_S3_REPORT_PREFIX: ${AWS_S3_REPORT_PREFIX:-report}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8086}
+      REPORT_DELETION_CRON: ${REPORT_DELETION_CRON:-0 0 1 * * SUN}
+    networks:
+      - wa-local-network
+    restart: unless-stopped
+
+networks:
+  wa-local-network:
+    external: true

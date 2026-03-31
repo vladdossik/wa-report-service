@@ -1,0 +1,38 @@
+server:
+  port: 8086
+
+app:
+  base-url: http://localhost:8086
+
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+integration:
+  storage-service:
+    base-url: ${STORAGE_SERVICE_BASE_URL}
+    timeout: 5000
+
+aws:
+  s3:
+    access-key-id: ${AWS_S3_ACCESS_KEY_ID}
+    secret-access-key: ${AWS_S3_SECRET_ACCESS_KEY}
+    region: us-east-1
+    endpoint: ${AWS_S3_ENDPOINT}
+    path-style-access: false
+    bucket-name: ${AWS_S3_BUCKET_NAME}
+    presigned-url-expiration: 3600
+
+jwt:
+  secret:
+    access: ${JWT_SECRET_ACCESS}
+
+schedule:
+  report-deletion:
+    cron: ${REPORT_DELETION_CRON}
+
+logging:
+  charset:
+    console: UTF-8

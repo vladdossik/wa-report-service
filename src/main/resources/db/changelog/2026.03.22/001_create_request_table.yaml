@@ -1,0 +1,73 @@
+databaseChangeLog:
+  - changeSet:
+      id: 2026.03.22_001_create_request_table
+      author: mihailov.pashka@yandex.ru
+      changes:
+        - createTable:
+            tableName: requests
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: external_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: period
+                  type: VARCHAR(10)
+              - column:
+                  name: format
+                  type: VARCHAR(10)
+              - column:
+                  name: from_date
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: to_date
+                  type: TIMESTAMP WITH TIME ZONE
+              - column:
+                  name: bucket
+                  type: VARCHAR(10)
+              - column:
+                  name: requested_at
+                  type: TIMESTAMP WITH TIME ZONE
+                  defaultValueComputed: CURRENT_TIMESTAMP
+              - column:
+                  name: from_cache
+                  type: BOOLEAN
+              - column:
+                  name: report_key
+                  type: VARCHAR(100)
+
+        - createIndex:
+            tableName: requests
+            indexName: idx_boolean_requests_external_id_format_from_date_to_date
+            columns:
+              - column:
+                  name: external_id
+              - column:
+                  name: period
+              - column:
+                  name: format
+              - column:
+                  name: from_date
+              - column:
+                  name: to_date
+            unique: false
+
+        - createIndex:
+            tableName: requests
+            indexName: idx_requests_external_id_format_to_date
+            columns:
+              - column:
+                  name: external_id
+              - column:
+                  name: format
+              - column:
+                  name: to_date
+            unique: false
