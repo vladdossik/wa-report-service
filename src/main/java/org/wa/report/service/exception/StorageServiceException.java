@@ -6,4 +6,8 @@ public class StorageServiceException extends RuntimeException {
         super(message);
     }
 
+    public StorageServiceException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
 }

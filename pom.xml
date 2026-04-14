@@ -65,7 +65,7 @@
         <dependency>
             <groupId>com.github.vladdossik</groupId>
             <artifactId>wa-auth-lib</artifactId>
-            <version>v0.0.4-SNAPSHOT</version>
+            <version>v0.0.5-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>software.amazon.awssdk</groupId>

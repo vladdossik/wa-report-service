@@ -23,8 +23,11 @@ public class S3Config {
     @Value("${aws.s3.region}")
     private String region;
 
-    @Value("${aws.s3.endpoint:}")
-    private String endpoint;
+    @Value("${aws.s3.endpoint.internal}")
+    private String internalEndpoint;
+
+    @Value("${aws.s3.endpoint.public}")
+    private String publicEndpoint;
 
     @Value("${aws.s3.path-style-access}")
     private Boolean pathStyleAccess;
@@ -39,8 +42,8 @@ public class S3Config {
                         )
                 );
 
-        if (!endpoint.isEmpty()) {
-            builder.endpointOverride(URI.create(endpoint))
+        if (!internalEndpoint.isEmpty()) {
+            builder.endpointOverride(URI.create(internalEndpoint))
                     .serviceConfiguration(S3Configuration.builder()
                             .pathStyleAccessEnabled(pathStyleAccess)
                             .build());
@@ -59,8 +62,11 @@ public class S3Config {
                         )
                 );
 
-        if (!endpoint.isEmpty()) {
-            builder.endpointOverride(URI.create(endpoint));
+        if (!publicEndpoint.isEmpty()) {
+            builder.endpointOverride(URI.create(publicEndpoint))
+                    .serviceConfiguration(S3Configuration.builder()
+                            .pathStyleAccessEnabled(pathStyleAccess)
+                            .build());
         }
 
         return builder.build();
