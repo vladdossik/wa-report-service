@@ -12,7 +12,7 @@ public class HtmlUtilEngine {
     private static final DateTimeFormatter DATE_TIME_FORMATTER =
             DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
-    public String render(CombinedDashboardDto data, String excelDownloadUrl) {
+    public String render(CombinedDashboardDto data) {
         return "<!DOCTYPE html>" +
                 "<html lang='ru'>" +
                 "<head>" +
@@ -25,7 +25,6 @@ public class HtmlUtilEngine {
                 "<body>" +
                 "<div class='container'>" +
                 renderHeader() +
-                renderDownloadButton(excelDownloadUrl) +
                 renderCharts(data) +
                 renderMetrics(data.getMetrics()) +
                 renderActivities(data.getActivities()) +
@@ -41,15 +40,6 @@ public class HtmlUtilEngine {
         return "<div class='header'>" +
                 "<h1>Отчёт о здоровье</h1>" +
                 "<p class='period'>Детальная статистика по метрикам и активностям</p>" +
-                "</div>";
-    }
-
-    private String renderDownloadButton(String excelDownloadUrl) {
-        return "<div class='download-section'>" +
-                "<a href='" + excelDownloadUrl + "' class='download-btn' download>" +
-                "<span class='btn-icon'>📊</span>" +
-                "<span class='btn-text'>Скачать Excel-отчёт</span>" +
-                "</a>" +
                 "</div>";
     }
 

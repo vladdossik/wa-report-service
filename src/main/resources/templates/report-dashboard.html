@@ -311,7 +311,6 @@
     </div>
 
     <div id="reportContent" class="report-content">
-        <!-- Контент будет загружаться через AJAX -->
         <div class="empty-section">Загрузка данных...</div>
     </div>
 </div>
@@ -327,13 +326,11 @@
     function changePeriod(period) {
         currentPeriod = period;
 
-        // Обновляем активную кнопку
         document.querySelectorAll('.period-btn').forEach(btn => {
             btn.classList.remove('active');
         });
         event.target.classList.add('active');
 
-        // Загружаем отчёт
         loadReport(period);
     }
 
@@ -349,7 +346,12 @@
     function loadReport(period) {
         showLoader(true);
 
-        fetch(`/v1/report/html?period=${period}`)
+        fetch(`/v1/mvc/report/html?period=${period}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        })
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Ошибка загрузки данных');
@@ -358,17 +360,20 @@
             })
             .then(data => {
                 if (data.url) {
-                    // Загружаем HTML по полученному URL
-                    return fetch(data.url);
+                    const iframe = document.createElement('iframe');
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100vh';
+                    iframe.style.border = 'none';
+                    iframe.src = data.url;
+
+                    const reportContent = document.getElementById('reportContent');
+                    reportContent.innerHTML = '';
+                    reportContent.appendChild(iframe);
+
+                    showLoader(false);
+                } else {
+                    throw new Error('URL не получен');
                 }
-                throw new Error('URL не получен');
-            })
-            .then(response => response.text())
-            .then(html => {
-                document.getElementById('reportContent').innerHTML = html;
-                destroyCharts();
-                initializeCharts();
-                showLoader(false);
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -386,7 +391,6 @@
     }
 
     function initializeCharts() {
-        // Инициализация графиков будет выполнена скриптом из загруженного HTML
         if (window.initializeChartsFromData) {
             window.initializeChartsFromData();
         }

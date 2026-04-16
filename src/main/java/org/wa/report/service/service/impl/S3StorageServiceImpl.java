@@ -192,7 +192,7 @@ public class S3StorageServiceImpl implements S3StorageService {
 
             String url = s3Presigner.presignGetObject(presignRequest).url().toString();
 
-            log.debug("Сгенерирована временная ссылка для: {}, истекающая через: {}s",
+            log.debug("Сгенерирована временная ссылка {} для: {}, истекающая через: {}s", url,
                     key, presignedUrlExpiration);
 
             return url;

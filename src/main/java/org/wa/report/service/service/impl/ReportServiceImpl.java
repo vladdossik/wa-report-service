@@ -152,19 +152,16 @@ public class ReportServiceImpl implements ReportService {
     private ReportResponseDto generateAndSaveHtmlReport(UUID userId, PeriodType period, ReportPeriodParams params) {
         try {
             CombinedDashboardDto data = storageServiceClient.getData(
-                    userId, params.getFrom(), params.getNow(), params.getBucket().getValue()).block();
+                    userId, params.getFrom(), params.getNow(), params.getBucket()).block();
 
             if (data == null) {
                 throw new ReportGenerationException("Не удалось получить данные для отчёта");
             }
 
-            String excelDownloadUrl = htmlReportGenerator.generateExcelDownloadUrl(
-                    period, params.getFrom(), params.getNow(), params.getBucket().getValue());
-
             String reportKey = util.generateReportKey(
                     userId, ReportType.HTML, period, params.getFrom(), params.getNow());
 
-            Resource report = htmlReportGenerator.generate(data, excelDownloadUrl);
+            Resource report = htmlReportGenerator.generate(data);
 
             try (InputStream inputStream = report.getInputStream()) {
                 s3StorageService.saveReport(
@@ -193,7 +190,7 @@ public class ReportServiceImpl implements ReportService {
     private ReportResponseDto generateAndSaveExcelReport(UUID userId, PeriodType period, ReportPeriodParams params) {
         try {
             CombinedDashboardDto data = storageServiceClient.getData(
-                    userId, params.getFrom(), params.getNow(), params.getBucket().getValue()).block();
+                    userId, params.getFrom(), params.getNow(), params.getBucket()).block();
 
             if (data == null) {
                 throw new ReportGenerationException("Не удалось получить данные для отчёта");

@@ -27,12 +27,19 @@ public class ExcelReportGenerator {
     private static final String[] METRICS_COLUMNS =
             {"Период", "Ср. пульс", "Макс. пульс", "Ср. шаги", "Макс. шаги", "Ср. сон (часы)"};
 
+    private static final int[] METRICS_COLUMN_WIDTHS = {20, 12, 12, 12, 12, 15};
+
     private static final String[] ACTIVITIES_COLUMNS =
             {"Период", "Активность", "Параметр", "Счётчик активности",
                     "Общее кол-во", "Ср. кол-во", "Мин. кол-во", "Макс. кол-во"};
 
+    private static final int[] ACTIVITIES_COLUMN_WIDTHS = {20, 15, 10, 15, 15, 12, 10, 10};
+
     private static final DateTimeFormatter FILENAME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+
+    private static final DateTimeFormatter DATE_TIME_FORMATTER =
+            DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
 
     private static final String SHEET_METRICS_NAME = "Метрики";
     private static final String SHEET_ACTIVITIES_NAME = "Активности";
@@ -78,16 +85,14 @@ public class ExcelReportGenerator {
 
         } catch (IOException e) {
             log.error("Ошибка при генерации Excel отчета", e);
-            throw new ReportGenerationException("Ошибка генерации Excel отчета: " + e);
+            throw new ReportGenerationException("Ошибка генерации Excel отчета: " + e.getMessage(), e);
         }
     }
 
     private void createMetricsSheet(SXSSFWorkbook workbook, CombinedDashboardDto data) {
         SXSSFSheet sheet = workbook.createSheet(SHEET_METRICS_NAME);
 
-        for (int i = 0; i < METRICS_COLUMNS.length; i++) {
-            sheet.trackColumnForAutoSizing(i);
-        }
+        setColumnWidths(sheet, METRICS_COLUMN_WIDTHS);
 
         List<AggregatedMetricDto> metrics = data.getMetrics();
 
@@ -104,25 +109,19 @@ public class ExcelReportGenerator {
         int rowNum = 3;
         for (AggregatedMetricDto metric : metrics) {
             Row row = sheet.createRow(rowNum++);
-            row.createCell(0).setCellValue(metric.getBucket().toLocalDateTime());
+            row.createCell(0).setCellValue(metric.getBucket().format(DATE_TIME_FORMATTER));
             row.createCell(1).setCellValue(metric.getAvgHeartRate());
             row.createCell(2).setCellValue(metric.getMaxHeartRate());
             row.createCell(3).setCellValue(metric.getAvgSteps());
             row.createCell(4).setCellValue(metric.getMaxSteps());
             row.createCell(5).setCellValue(metric.getAvgSleep());
         }
-
-        for (int i = 0; i < METRICS_COLUMNS.length; i++) {
-            sheet.autoSizeColumn(i);
-        }
     }
 
     private void createActivitiesSheet(SXSSFWorkbook workbook, CombinedDashboardDto data) {
         SXSSFSheet sheet = workbook.createSheet(SHEET_ACTIVITIES_NAME);
 
-        for (int i = 0; i < ACTIVITIES_COLUMNS.length; i++) {
-            sheet.trackColumnForAutoSizing(i);
-        }
+        setColumnWidths(sheet, ACTIVITIES_COLUMN_WIDTHS);
 
         List<AggregatedActivityDto> activities = data.getActivities();
 
@@ -139,7 +138,7 @@ public class ExcelReportGenerator {
         int rowNum = 3;
         for (AggregatedActivityDto activity : activities) {
             Row row = sheet.createRow(rowNum++);
-            row.createCell(0).setCellValue(activity.getBucket().toLocalDateTime());
+            row.createCell(0).setCellValue(activity.getBucket().format(DATE_TIME_FORMATTER));
             row.createCell(1).setCellValue(activity.getEventType());
             row.createCell(2).setCellValue(activity.getUnit());
             row.createCell(3).setCellValue(activity.getEventCount());
@@ -148,14 +147,16 @@ public class ExcelReportGenerator {
             row.createCell(6).setCellValue(activity.getMinQuantity());
             row.createCell(7).setCellValue(activity.getMaxQuantity());
         }
-
-        for (int i = 0; i < ACTIVITIES_COLUMNS.length; i++) {
-            sheet.autoSizeColumn(i);
-        }
     }
 
     private String generateFilename() {
         String timestamp = OffsetDateTime.now().format(FILENAME_FORMATTER);
         return EXCEL_FILE_PREFIX + timestamp + EXCEL_FILE_EXTENSION;
+    }
+
+    private void setColumnWidths(SXSSFSheet sheet, int[] widths) {
+        for (int i = 0; i < widths.length; i++) {
+            sheet.setColumnWidth(i, widths[i] * 256);
+        }
     }
 }

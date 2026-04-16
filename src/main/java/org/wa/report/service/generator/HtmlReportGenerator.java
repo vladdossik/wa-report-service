@@ -2,12 +2,10 @@ package org.wa.report.service.generator;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.wa.report.service.dto.CombinedDashboardDto;
-import org.wa.report.service.enumeration.PeriodType;
 import org.wa.report.service.exception.ReportGenerationException;
 import org.wa.report.service.util.HtmlUtilEngine;
 import java.io.ByteArrayInputStream;
@@ -23,17 +21,13 @@ public class HtmlReportGenerator {
 
     private final HtmlUtilEngine htmlUtilEngine;
 
-    @Value("${app.base-url}")
-    private String baseUrl;
-
     private static final DateTimeFormatter FILENAME_FORMATTER =
             DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
 
-    private static final String EXCEL_DOWNLOAD_URL = "%s/v1/report/download/excel?period=%s&from=%s&to=%s&bucket=%s";
     private static final String HTML_FILE_PREFIX = "html_report_";
     private static final String HTML_FILE_EXTENSION = ".html";
 
-    public Resource generate(CombinedDashboardDto dto, String excelDownloadUrl) {
+    public Resource generate(CombinedDashboardDto dto) {
         if (dto == null) {
             throw new ReportGenerationException("Данные для генерации отчёта отсутствуют");
         }
@@ -48,7 +42,7 @@ public class HtmlReportGenerator {
 
             validateInputData(dto);
 
-            String html = htmlUtilEngine.render(dto, excelDownloadUrl);
+            String html = htmlUtilEngine.render(dto);
 
             if (html == null || html.isEmpty()) {
                 throw new ReportGenerationException("Ошибка генерации html-отчёта");
@@ -76,16 +70,8 @@ public class HtmlReportGenerator {
             throw e;
         } catch (Exception e) {
             log.error("Неожиданная ошибка при генерации HTML отчета", e);
-            throw new ReportGenerationException("Неожиданная ошибка при генерации HTML отчета: " + e);
+            throw new ReportGenerationException("Неожиданная ошибка при генерации HTML отчета: " + e.getMessage(), e);
         }
-    }
-
-    public String generateExcelDownloadUrl(PeriodType period, OffsetDateTime from,
-                                           OffsetDateTime to, String bucket) {
-        String fromFormatted = from.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-        String toFormatted = to.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-
-        return String.format(EXCEL_DOWNLOAD_URL, baseUrl, period, fromFormatted, toFormatted, bucket);
     }
 
     private void validateInputData(CombinedDashboardDto dto) {
